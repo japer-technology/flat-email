@@ -28,6 +28,8 @@ back up, and process with any tool you already use.
 - Deterministic, human-readable on-disk layout (see [Layout](#on-disk-layout)).
 - Full-text search across your entire archive.
 - A local HTTP API and an MCP server for integration with tools and assistants.
+- A standalone, self-contained HTML file for every email — open it straight
+  from disk and read your mail as a serverless web app, no server required.
 - Read-only by default — your source mailboxes are never modified.
 
 ## Installation
@@ -67,17 +69,57 @@ my-archive/
           metadata.json        # headers, labels, thread id, flags
           body.txt             # plain-text body
           body.html            # html body (if present)
+          email.html           # standalone, self-contained reader page
           attachments/
             invoice.pdf
       threads/
         <thread-id>.json       # ordered list of message ids
+        <thread-id>.html       # standalone reader for the whole thread
       labels/
         inbox.json             # message ids carrying this label
   index/                       # search index (regenerable)
+  index.html                   # serverless web app entry point
 ```
 
 Because everything is a file, you can browse the archive in a file manager,
 back it up with any sync tool, or process it with scripts.
+
+> **`body.html` vs `email.html`** — `body.html` is the raw HTML body exactly as
+> the sender wrote it. `email.html` wraps that body together with the message
+> headers (from, to, subject, date), labels, and links to attachments into a
+> complete, styled reader page you can open on its own.
+
+## Reading Your Mail (Serverless HTML)
+
+Every synced message is rendered to a standalone `email.html` file, and every
+thread to a `<thread-id>.html` file. These pages are fully self-contained: they
+embed their own styles and inline the message content, so they open and render
+correctly straight from local disk by double-clicking — no server, no build
+step, and no internet connection required.
+
+```bash
+# Open a single message in your browser
+open ./my-archive/accounts/me@example.com/messages/2024/01/15/<message-id>/email.html
+
+# Open a whole thread
+open ./my-archive/accounts/me@example.com/threads/<thread-id>.html
+```
+
+At the root of the archive, `index.html` ties every email together into a
+single serverless web app. Open it from disk (`file://`) and you get a familiar
+mailbox experience — browse folders and labels, follow threads, search, and
+click through to individual messages and attachments — all powered by the flat
+files beside it, with nothing running in the background.
+
+```bash
+# Launch the offline reader — your mail as a local web app
+open ./my-archive/index.html
+```
+
+Imagine your preferred way to read your own email being a folder you fully own:
+copy it to a USB stick, a backup drive, or another machine, double-click
+`index.html`, and your entire mailbox is right there, exactly as a webapp,
+working completely offline.
 
 ## Usage
 
