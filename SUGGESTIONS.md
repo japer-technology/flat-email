@@ -38,8 +38,9 @@ sync engine as a function that produces it.** Build outward from there.
 
 `IDEAS.md` §6 already lists this first — strongly agree. Before any provider code
 exists, write `SPEC.md` (or `docs/layout.md`) that pins down the format as a
-versioned contract. The README sketch is a great start but leaves load-bearing
-questions unanswered:
+versioned contract. **This has now been done: see [`SPEC.md`](SPEC.md)**, which
+answers every load-bearing question below as a binding rule. The README sketch is
+a great start but left these questions unanswered:
 
 - **Which date buckets the message?** The path `messages/2024/01/15/` needs a
   defined source: the `Date:` header (sender-controlled, can be wrong/missing),

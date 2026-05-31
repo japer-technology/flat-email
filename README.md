@@ -84,6 +84,10 @@ my-archive/
 Because everything is a file, you can browse the archive in a file manager,
 back it up with any sync tool, or process it with scripts.
 
+The layout above is a sketch; the precise, versioned contract — date bucketing,
+message naming, store-once labels, attachment collisions, cross-OS portability,
+and the determinism guarantees — is defined in [`SPEC.md`](SPEC.md).
+
 > **`body.html` vs `email.html`** — `body.html` is the raw HTML body exactly as
 > the sender wrote it. `email.html` wraps that body together with the message
 > headers (from, to, subject, date), labels, and links to attachments into a
