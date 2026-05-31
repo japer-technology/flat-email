@@ -1,0 +1,34 @@
+From: Ada Lovelace <ada@example.com>
+To: me@example.com
+Subject: =?UTF-8?Q?Re=C3=A7u_n=C2=B01?=
+Date: Mon, 15 Jan 2024 09:30:00 +0000
+Message-ID: <a-001@example.com>
+MIME-Version: 1.0
+Content-Type: multipart/related; boundary="R"
+
+--R
+Content-Type: multipart/alternative; boundary="A"
+
+--A
+Content-Type: text/plain; charset="utf-8"
+
+Bonjour
+--A
+Content-Type: text/html; charset="utf-8"
+
+<html><head><script>alert('x')</script></head><body><p onclick="steal()">Bonjour</p><img src="cid:logo123"><img src="http://track.example.com/o.gif?id=1"><a href="http://example.com/pay">Pay</a></body></html>
+--A--
+--R
+Content-Type: image/png
+Content-Transfer-Encoding: base64
+Content-Disposition: inline; filename="logo.png"
+Content-ID: <logo123>
+
+iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==
+--R
+Content-Type: application/pdf
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename="invoice.pdf"
+
+JVBERi0xLjQKJSBnb2xkZW4gaW52b2ljZSBBCiUlRU9GCg==
+--R--

@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flat-email.dev/schemas/catalog.schema.json",
+  "title": "Flat Email archive catalog",
+  "description": "Schema for the archive-root catalog.json defined in SPEC.md \u00a711. catalog.js is the same document assigned to window.FLAT_EMAIL_CATALOG.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["specVersion", "counts", "accounts", "messages", "threads", "labels"],
+  "properties": {
+    "specVersion": { "type": "integer", "minimum": 1 },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["accounts", "messages", "threads", "labels"],
+      "properties": {
+        "accounts": { "type": "integer", "minimum": 0 },
+        "messages": { "type": "integer", "minimum": 0 },
+        "threads": { "type": "integer", "minimum": 0 },
+        "labels": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "accounts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["address", "messagesPath", "threadsPath", "labelsManifestPath", "counts"],
+        "properties": {
+          "address": { "type": "string" },
+          "messagesPath": { "$ref": "#/$defs/relPath" },
+          "threadsPath": { "$ref": "#/$defs/relPath" },
+          "labelsManifestPath": { "$ref": "#/$defs/relPath" },
+          "counts": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["messages", "threads", "labels"],
+            "properties": {
+              "messages": { "type": "integer", "minimum": 0 },
+              "threads": { "type": "integer", "minimum": 0 },
+              "labels": { "type": "integer", "minimum": 0 }
+            }
+          }
+        }
+      }
+    },
+    "messages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "messageKey",
+          "account",
+          "date",
+          "subject",
+          "from",
+          "threadKey",
+          "labels",
+          "attachmentCount",
+          "path"
+        ],
+        "properties": {
+          "messageKey": { "type": "string", "pattern": "^[0-9a-f]+$" },
+          "account": { "type": "string" },
+          "date": { "type": "string", "format": "date-time" },
+          "subject": { "type": "string" },
+          "from": {
+            "oneOf": [
+              { "type": "null" },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["name", "address"],
+                "properties": {
+                  "name": { "type": ["string", "null"] },
+                  "address": { "type": "string" }
+                }
+              }
+            ]
+          },
+          "threadKey": { "type": "string" },
+          "labels": { "type": "array", "items": { "type": "string" } },
+          "attachmentCount": { "type": "integer", "minimum": 0 },
+          "path": { "$ref": "#/$defs/relPath" }
+        }
+      }
+    },
+    "threads": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["threadKey", "account", "path"],
+        "properties": {
+          "threadKey": { "type": "string" },
+          "account": { "type": "string" },
+          "path": { "$ref": "#/$defs/relPath" }
+        }
+      }
+    },
+    "labels": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "account", "path"],
+        "properties": {
+          "name": { "type": "string" },
+          "account": { "type": "string" },
+          "path": { "$ref": "#/$defs/relPath" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "relPath": {
+      "type": "string",
+      "description": "Archive-root-relative URL path using '/' separators on every OS.",
+      "pattern": "^[^/].*$"
+    }
+  }
+}

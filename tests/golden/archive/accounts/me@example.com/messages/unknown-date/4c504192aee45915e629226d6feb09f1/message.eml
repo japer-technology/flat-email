@@ -1,0 +1,29 @@
+From: noreply@example.org
+To: me@example.com
+Subject: Reports
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="M"
+
+--M
+Content-Type: text/plain; charset="utf-8"
+
+See attached.
+--M
+Content-Type: application/pdf
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename="report.pdf"
+
+JVBERi0xLjQKJSBnb2xkZW4gcmVwb3J0IG9uZQolJUVPRgo=
+--M
+Content-Type: application/pdf
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename="report.pdf"
+
+JVBERi0xLjQKJSBnb2xkZW4gcmVwb3J0IHR3bwolJUVPRgo=
+--M
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename*=UTF-8''rapport%C3%A9.txt
+
+cmFwcG9ydCBhY2NlbnR1w6kK
+--M--

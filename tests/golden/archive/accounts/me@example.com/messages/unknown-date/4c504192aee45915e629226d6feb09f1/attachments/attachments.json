@@ -1,0 +1,32 @@
+[
+  {
+    "partIndex": 1,
+    "originalFilename": "report.pdf",
+    "onDiskName": "report.pdf",
+    "contentType": "application/pdf",
+    "disposition": "attachment",
+    "contentId": null,
+    "size": 35,
+    "sha256": "33fecd0b410ba7c8f6115caa220f7ec2772fc9a60fb5cad63f5f3696a608ef75"
+  },
+  {
+    "partIndex": 2,
+    "originalFilename": "report.pdf",
+    "onDiskName": "report (1).pdf",
+    "contentType": "application/pdf",
+    "disposition": "attachment",
+    "contentId": null,
+    "size": 35,
+    "sha256": "fe70072bff7dbb742f15692f9a086e3b9a2140ad6e8b9df94c8de709f66a81ff"
+  },
+  {
+    "partIndex": 3,
+    "originalFilename": "rapporté.txt",
+    "onDiskName": "rapporté.txt",
+    "contentType": "text/plain",
+    "disposition": "attachment",
+    "contentId": null,
+    "size": 18,
+    "sha256": "ff9321cc074d1df9efc61f560da25347c9ce5fb7316bc73ffb968b321e275c7b"
+  }
+]

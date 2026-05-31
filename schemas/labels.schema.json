@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flat-email.dev/schemas/labels.schema.json",
+  "title": "Flat Email label manifest",
+  "description": "Schema for labels/labels.json defined in SPEC.md \u00a74.7. Keys are sanitized label filenames (without the .json extension); values record the original provider label.",
+  "type": "object",
+  "additionalProperties": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["originalName", "providerId", "type", "visibility"],
+    "properties": {
+      "originalName": { "type": "string" },
+      "providerId": { "type": ["string", "null"] },
+      "type": { "enum": ["system", "user"] },
+      "visibility": { "enum": ["visible", "hidden"] }
+    }
+  }
+}

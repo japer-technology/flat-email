@@ -1,0 +1,14 @@
+{
+  "inbox": {
+    "originalName": "INBOX",
+    "providerId": null,
+    "type": "system",
+    "visibility": "visible"
+  },
+  "receipts": {
+    "originalName": "Receipts",
+    "providerId": null,
+    "type": "user",
+    "visibility": "visible"
+  }
+}

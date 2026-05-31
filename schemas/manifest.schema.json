@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flat-email.dev/schemas/manifest.schema.json",
+  "title": "Flat Email archive manifest",
+  "description": "Schema for the archive-root flat-email.json defined in SPEC.md \u00a72.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "specVersion"],
+  "properties": {
+    "format": { "const": "flat-email" },
+    "specVersion": { "type": "integer", "minimum": 1 },
+    "messageKeyBytes": { "type": "integer", "enum": [16, 32], "default": 16 },
+    "createdBy": { "type": "string" },
+    "createdAt": { "type": "string", "format": "date-time" }
+  }
+}

@@ -1,0 +1,81 @@
+{
+  "accounts": [
+    {
+      "address": "me@example.com",
+      "counts": {
+        "labels": 2,
+        "messages": 2,
+        "threads": 2
+      },
+      "labelsManifestPath": "accounts/me@example.com/labels/labels.json",
+      "messagesPath": "accounts/me@example.com/messages",
+      "threadsPath": "accounts/me@example.com/threads"
+    }
+  ],
+  "counts": {
+    "accounts": 1,
+    "labels": 2,
+    "messages": 2,
+    "threads": 2
+  },
+  "labels": [
+    {
+      "account": "me@example.com",
+      "name": "inbox",
+      "path": "accounts/me@example.com/labels/inbox.json"
+    },
+    {
+      "account": "me@example.com",
+      "name": "receipts",
+      "path": "accounts/me@example.com/labels/receipts.json"
+    }
+  ],
+  "messages": [
+    {
+      "account": "me@example.com",
+      "attachmentCount": 3,
+      "date": "1970-01-01T00:00:00Z",
+      "from": {
+        "address": "noreply@example.org",
+        "name": null
+      },
+      "labels": [
+        "inbox"
+      ],
+      "messageKey": "4c504192aee45915e629226d6feb09f1",
+      "path": "accounts/me@example.com/messages/unknown-date/4c504192aee45915e629226d6feb09f1",
+      "subject": "Reports",
+      "threadKey": "4c504192aee45915e629226d6feb09f1"
+    },
+    {
+      "account": "me@example.com",
+      "attachmentCount": 2,
+      "date": "2024-01-15T09:30:00Z",
+      "from": {
+        "address": "ada@example.com",
+        "name": "Ada Lovelace"
+      },
+      "labels": [
+        "inbox",
+        "receipts"
+      ],
+      "messageKey": "f69a0db14d0cc6cc160aaee6b89fb786",
+      "path": "accounts/me@example.com/messages/2024/01/15/f69a0db14d0cc6cc160aaee6b89fb786",
+      "subject": "Reçu n°1",
+      "threadKey": "f69a0db14d0cc6cc160aaee6b89fb786"
+    }
+  ],
+  "specVersion": 1,
+  "threads": [
+    {
+      "account": "me@example.com",
+      "path": "accounts/me@example.com/threads/4c504192aee45915e629226d6feb09f1.json",
+      "threadKey": "4c504192aee45915e629226d6feb09f1"
+    },
+    {
+      "account": "me@example.com",
+      "path": "accounts/me@example.com/threads/f69a0db14d0cc6cc160aaee6b89fb786.json",
+      "threadKey": "f69a0db14d0cc6cc160aaee6b89fb786"
+    }
+  ]
+}

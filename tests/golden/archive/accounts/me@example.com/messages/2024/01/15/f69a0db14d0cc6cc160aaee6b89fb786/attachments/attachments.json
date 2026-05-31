@@ -1,0 +1,22 @@
+[
+  {
+    "partIndex": 2,
+    "originalFilename": "logo.png",
+    "onDiskName": "logo.png",
+    "contentType": "image/png",
+    "disposition": "inline",
+    "contentId": "<logo123>",
+    "size": 70,
+    "sha256": "0fbc91e1bc582c5d4a730903c55f567af9561fd8db39bee8d4ee819d0df96a02"
+  },
+  {
+    "partIndex": 3,
+    "originalFilename": "invoice.pdf",
+    "onDiskName": "invoice.pdf",
+    "contentType": "application/pdf",
+    "disposition": "attachment",
+    "contentId": null,
+    "size": 34,
+    "sha256": "881557e03c40fde8d3880f8201e03b4d2f9a9fccd6fd860335c950949184199a"
+  }
+]
