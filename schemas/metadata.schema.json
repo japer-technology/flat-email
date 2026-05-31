@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flat-email.dev/schemas/metadata.schema.json",
+  "title": "Flat Email message metadata",
+  "description": "Schema for the per-message metadata.json file defined in SPEC.md \u00a710.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "specVersion",
+    "messageKey",
+    "messageIdHeader",
+    "date",
+    "dateSource",
+    "subject",
+    "from",
+    "to",
+    "cc",
+    "bcc",
+    "replyTo",
+    "threadKey",
+    "labels",
+    "flags",
+    "attachmentCount",
+    "hasBodyText",
+    "hasBodyHtml",
+    "firstSeen",
+    "lastSeen"
+  ],
+  "properties": {
+    "specVersion": { "type": "integer", "minimum": 1 },
+    "messageKey": { "type": "string", "pattern": "^[0-9a-f]+$" },
+    "messageIdHeader": { "type": ["string", "null"] },
+    "date": { "type": "string", "format": "date-time" },
+    "dateSource": { "enum": ["internal", "received", "header", "unknown"] },
+    "subject": { "type": "string" },
+    "from": {
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "#/$defs/address" }
+      ]
+    },
+    "to": { "type": "array", "items": { "$ref": "#/$defs/address" } },
+    "cc": { "type": "array", "items": { "$ref": "#/$defs/address" } },
+    "bcc": { "type": "array", "items": { "$ref": "#/$defs/address" } },
+    "replyTo": { "type": "array", "items": { "$ref": "#/$defs/address" } },
+    "threadKey": { "type": "string" },
+    "labels": { "type": "array", "items": { "type": "string" } },
+    "flags": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "seen",
+          "answered",
+          "flagged",
+          "draft",
+          "deleted",
+          "recent",
+          "starred",
+          "important"
+        ]
+      }
+    },
+    "attachmentCount": { "type": "integer", "minimum": 0 },
+    "hasBodyText": { "type": "boolean" },
+    "hasBodyHtml": { "type": "boolean" },
+    "firstSeen": { "type": "string", "format": "date-time" },
+    "lastSeen": { "type": "string", "format": "date-time" },
+    "providerMessageId": { "type": ["string", "null"] },
+    "providerThreadId": { "type": ["string", "null"] },
+    "providerFlags": { "type": "array", "items": { "type": "string" } },
+    "inReplyTo": { "type": ["string", "null"] },
+    "references": { "type": "array", "items": { "type": "string" } }
+  },
+  "$defs": {
+    "address": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "address"],
+      "properties": {
+        "name": { "type": ["string", "null"] },
+        "address": { "type": "string" }
+      }
+    }
+  }
+}

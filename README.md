@@ -6,6 +6,13 @@ filesystem-native structure. It preserves emails, attachments, metadata, labels,
 and threads as ordinary files, making personal mail searchable, ownable,
 portable, and accessible through tools, APIs, MCP, or direct file inspection.
 
+> **Project status: design stage.** Flat Email is currently a **specification**,
+> not yet a released tool. The on-disk format is defined in [`SPEC.md`](SPEC.md),
+> with machine-readable schemas in [`schemas/`](schemas/) and a byte-exact
+> conformance fixture in [`tests/golden/`](tests/golden/). The CLI, connectors,
+> and readers described below are the **target design**; commands and provider
+> support are planned, not shipping yet. See [Project Status](#project-status).
+
 ## Why Flat Email
 
 Email is one of the most valuable personal data stores, yet it is usually locked
@@ -86,12 +93,16 @@ back it up with any sync tool, or process it with scripts.
 
 The layout above is a sketch; the precise, versioned contract — date bucketing,
 message naming, store-once labels, attachment collisions, cross-OS portability,
-and the determinism guarantees — is defined in [`SPEC.md`](SPEC.md).
+the `metadata.json` record, the archive `catalog.json`, HTML safety rules, and
+the determinism guarantees — is defined in [`SPEC.md`](SPEC.md) and the schemas in
+[`schemas/`](schemas/).
 
-> **`body.html` vs `email.html`** — `body.html` is the raw HTML body exactly as
-> the sender wrote it. `email.html` wraps that body together with the message
-> headers (from, to, subject, date), labels, and links to attachments into a
-> complete, styled reader page you can open on its own.
+> **`body.html` vs `email.html`** — `body.html` is the **sanitized** HTML body
+> (scripts removed and remote content blocked per [`SPEC.md`](SPEC.md) §13; the
+> raw sender bytes are kept verbatim in `message.eml`). `email.html` wraps that
+> sanitized body together with the message headers (from, to, subject, date),
+> labels, and links to attachments into a complete, styled reader page you can
+> open on its own.
 
 ## Reading Your Mail (Serverless HTML)
 
@@ -113,7 +124,10 @@ At the root of the archive, `index.html` ties every email together into a
 single serverless web app. Open it from disk (`file://`) and you get a familiar
 mailbox experience — browse folders and labels, follow threads, search, and
 click through to individual messages and attachments — all powered by the flat
-files beside it, with nothing running in the background.
+files beside it, with nothing running in the background. Because browsers cannot
+list a folder over `file://`, the reader loads a generated archive index
+(`catalog.js` / `catalog.json`, see [`SPEC.md`](SPEC.md) §11) instead of trying
+to discover files on its own.
 
 ```bash
 # Launch the offline reader — your mail as a local web app
@@ -157,11 +171,31 @@ flat-email mcp --archive ./my-archive
 
 ## Supported Providers
 
+Connector support is **planned**; the table below is the target matrix, not a
+statement of what ships today (see [Project Status](#project-status)).
+
 | Provider              | Auth      | Status |
 | --------------------- | --------- | ------ |
-| Gmail                 | OAuth 2.0 | ✅     |
-| Outlook / Microsoft 365 | OAuth 2.0 | ✅     |
-| Generic IMAP          | Password / App password | ✅ |
+| Gmail                 | OAuth 2.0 | Planned |
+| Outlook / Microsoft 365 | OAuth 2.0 | Planned |
+| Generic IMAP          | Password / App password | Planned |
+| Local `.mbox` / Maildir import | none | Planned (first milestone) |
+
+## Project Status
+
+Flat Email is at the **design/specification** stage. What exists today:
+
+- [`MISSION.md`](MISSION.md) — why the project exists.
+- [`SPEC.md`](SPEC.md) — the versioned, byte-level on-disk format contract.
+- [`schemas/`](schemas/) — JSON Schemas for every JSON file the format defines.
+- [`tests/golden/`](tests/golden/) — a tiny byte-exact conformance fixture
+  (raw `.eml` inputs paired with the archive they must produce).
+- [`IDEAS.md`](IDEAS.md) / [`SUGGESTIONS.md`](SUGGESTIONS.md) — execution modes
+  and design guidance.
+
+The `flat-email` CLI, the provider connectors, the HTTP API, the MCP server, and
+the serverless readers are **not yet implemented**. The commands in this README
+document the intended interface so the format can be designed against real usage.
 
 ## Contributing
 

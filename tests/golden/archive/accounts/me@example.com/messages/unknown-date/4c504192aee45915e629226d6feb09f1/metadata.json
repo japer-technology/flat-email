@@ -1,0 +1,31 @@
+{
+  "attachmentCount": 3,
+  "bcc": [],
+  "cc": [],
+  "date": "1970-01-01T00:00:00Z",
+  "dateSource": "unknown",
+  "firstSeen": "2024-01-15T12:00:00Z",
+  "flags": [],
+  "from": {
+    "address": "noreply@example.org",
+    "name": null
+  },
+  "hasBodyHtml": false,
+  "hasBodyText": true,
+  "labels": [
+    "inbox"
+  ],
+  "lastSeen": "2024-01-15T12:00:00Z",
+  "messageIdHeader": null,
+  "messageKey": "4c504192aee45915e629226d6feb09f1",
+  "replyTo": [],
+  "specVersion": 1,
+  "subject": "Reports",
+  "threadKey": "4c504192aee45915e629226d6feb09f1",
+  "to": [
+    {
+      "address": "me@example.com",
+      "name": null
+    }
+  ]
+}

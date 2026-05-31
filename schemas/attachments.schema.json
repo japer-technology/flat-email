@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flat-email.dev/schemas/attachments.schema.json",
+  "title": "Flat Email attachment manifest",
+  "description": "Schema for the per-message attachments/attachments.json defined in SPEC.md \u00a74.4. Entries are ordered by MIME part index ascending.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "partIndex",
+      "originalFilename",
+      "onDiskName",
+      "contentType",
+      "disposition",
+      "contentId",
+      "size",
+      "sha256"
+    ],
+    "properties": {
+      "partIndex": { "type": "integer", "minimum": 0 },
+      "originalFilename": { "type": ["string", "null"] },
+      "onDiskName": { "type": "string" },
+      "contentType": { "type": "string" },
+      "disposition": { "enum": ["attachment", "inline"] },
+      "contentId": { "type": ["string", "null"] },
+      "size": { "type": "integer", "minimum": 0 },
+      "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+    }
+  }
+}

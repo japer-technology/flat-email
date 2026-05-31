@@ -1,0 +1,34 @@
+{
+  "attachmentCount": 2,
+  "bcc": [],
+  "cc": [],
+  "date": "2024-01-15T09:30:00Z",
+  "dateSource": "header",
+  "firstSeen": "2024-01-15T12:00:00Z",
+  "flags": [
+    "seen"
+  ],
+  "from": {
+    "address": "ada@example.com",
+    "name": "Ada Lovelace"
+  },
+  "hasBodyHtml": true,
+  "hasBodyText": true,
+  "labels": [
+    "inbox",
+    "receipts"
+  ],
+  "lastSeen": "2024-01-15T12:00:00Z",
+  "messageIdHeader": "<a-001@example.com>",
+  "messageKey": "f69a0db14d0cc6cc160aaee6b89fb786",
+  "replyTo": [],
+  "specVersion": 1,
+  "subject": "Reçu n°1",
+  "threadKey": "f69a0db14d0cc6cc160aaee6b89fb786",
+  "to": [
+    {
+      "address": "me@example.com",
+      "name": null
+    }
+  ]
+}
