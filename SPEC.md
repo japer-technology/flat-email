@@ -489,7 +489,7 @@ are fixed here.
   `attachments/` (§4.4); its disposition and `Content-ID` are recorded so the HTML
   body's `cid:` references can be rewritten to relative paths (§13).
 - **Malformed MIME.** A part with a broken or missing boundary, a truncated
-  body, or an unpar-seable structure is treated as a single opaque
+  body, or an unparseable structure is treated as a single opaque
   `application/octet-stream` attachment rather than guessed at, so two
   implementations agree. The condition is noted in `attachments.json` via the
   content type; no data is discarded.
