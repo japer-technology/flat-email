@@ -41,7 +41,7 @@ func ReadMaildir(dir, label string) ([]model.Message, error) {
 			if err != nil {
 				return nil, err
 			}
-			m := newMessage(normalizeToCRLF(raw), label)
+			m := newMessage(raw, label)
 			if f := maildirInfoFlags(name); len(f) > 0 {
 				m.Flags = mergeFlags(m.Flags, f)
 			}
