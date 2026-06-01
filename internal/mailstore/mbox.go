@@ -31,7 +31,7 @@ func ReadMbox(r io.Reader, label string) ([]model.Message, error) {
 		if !started {
 			return
 		}
-		raw := normalizeToCRLF(unescapeFromQuoting(cur.Bytes()))
+		raw := unescapeFromQuoting(cur.Bytes())
 		msgs = append(msgs, newMessage(raw, label))
 		cur.Reset()
 	}
