@@ -101,7 +101,7 @@ func sanitizeAttrs(n *html.Node, cids map[string]string) {
 			}
 		case "href":
 			low := strings.ToLower(strings.TrimSpace(a.Val))
-			if hasActiveScheme(low) {
+			if hasActiveScheme(low) || (n.DataAtom != atom.A && isRemoteURL(low)) {
 				continue
 			}
 		}
