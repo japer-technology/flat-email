@@ -1,5 +1,11 @@
 # Flat Email
 
+<p align="center">
+  <picture>
+    <img src="https://raw.githubusercontent.com/japer-technology/flat-email/main/flat-email.png" alt="Flat Email" width="320">
+  </picture>
+</p>
+
 A portable email extraction and archiving system that pulls messages from Gmail,
 Outlook, IMAP, and other providers, then converts them into a flat,
 filesystem-native structure. It preserves emails, attachments, metadata, labels,
