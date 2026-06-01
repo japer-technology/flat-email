@@ -6,12 +6,13 @@ filesystem-native structure. It preserves emails, attachments, metadata, labels,
 and threads as ordinary files, making personal mail searchable, ownable,
 portable, and accessible through tools, APIs, MCP, or direct file inspection.
 
-> **Project status: design stage.** Flat Email is currently a **specification**,
-> not yet a released tool. The on-disk format is defined in [`SPEC.md`](SPEC.md),
-> with machine-readable schemas in [`schemas/`](schemas/) and a byte-exact
-> conformance fixture in [`tests/golden/`](tests/golden/). The CLI, connectors,
-> and readers described below are the **target design**; commands and provider
-> support are planned, not shipping yet. See [Project Status](#project-status).
+> **Project status: early development.** The on-disk format is defined in
+> [`SPEC.md`](SPEC.md), with machine-readable schemas in [`schemas/`](schemas/)
+> and a byte-exact conformance fixture in [`tests/golden/`](tests/golden/). A
+> first end-to-end slice ships today: read-only local `.mbox` / Maildir import
+> via `flat-email import`. The provider connectors, search, API, and MCP server
+> described below are the **target design** and not shipping yet. See
+> [Project Status](#project-status).
 
 ## Why Flat Email
 
@@ -179,11 +180,15 @@ statement of what ships today (see [Project Status](#project-status)).
 | Gmail                 | OAuth 2.0 | Planned |
 | Outlook / Microsoft 365 | OAuth 2.0 | Planned |
 | Generic IMAP          | Password / App password | Planned |
-| Local `.mbox` / Maildir import | none | Planned (first milestone) |
+| Local `.mbox` / Maildir import | none | **Available** |
 
 ## Project Status
 
-Flat Email is at the **design/specification** stage. What exists today:
+Flat Email is in **early development**. The on-disk format is specified and a
+first end-to-end slice now ships: importing local `.mbox` / Maildir mail into a
+deterministic, `SPEC.md`-conformant archive with standalone HTML readers.
+
+What exists today:
 
 - [`MISSION.md`](MISSION.md) — why the project exists.
 - [`SPEC.md`](SPEC.md) — the versioned, byte-level on-disk format contract.
@@ -193,9 +198,38 @@ Flat Email is at the **design/specification** stage. What exists today:
 - [`IDEAS.md`](IDEAS.md) / [`SUGGESTIONS.md`](SUGGESTIONS.md) — execution modes
   and design guidance.
 
-The `flat-email` CLI, the provider connectors, the HTTP API, the MCP server, and
-the serverless readers are **not yet implemented**. The commands in this README
-document the intended interface so the format can be designed against real usage.
+**Shipping now:**
+
+- Read-only local `.mbox` and Maildir connectors.
+- The deterministic archive writer — `message.eml` plus every derived file
+  (`metadata.json`, `body.txt`, `body.html`, decoded `attachments/` +
+  `attachments.json`, per-account `threads/` and `labels/`, and the root
+  `flat-email.json` + `catalog.json`/`catalog.js`).
+- §13 HTML sanitization and self-contained per-message `email.html` and
+  per-thread `<thread-key>.html` readers.
+- A minimal CLI: `flat-email import`.
+
+```bash
+# Import a local mbox or Maildir into an archive
+flat-email import --account me@example.com --mbox ./inbox.mbox --out ./my-archive
+flat-email import --account me@example.com --maildir ./Maildir --out ./my-archive
+```
+
+**Not yet implemented:** the Gmail/Outlook/IMAP provider connectors and
+incremental sync, full-text `search`, the HTTP API (`serve`), the MCP server,
+and the whole-archive serverless `index.html` reader. The other commands in this
+README document the intended interface so the format can be designed against
+real usage.
+
+### Non-goals
+
+- Flat Email is **not a mail client** — it does not send, reply to, or manage
+  mail; it produces an archive you read with ordinary tools.
+- It **never modifies your source mailboxes** — all connectors are strictly
+  read-only.
+- Every file other than `message.eml` is a **pure, regenerable derivation** of
+  the raw message plus [`SPEC.md`](SPEC.md); the `.eml` is the only source of
+  truth.
 
 ## Contributing
 
