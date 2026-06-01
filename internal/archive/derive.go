@@ -15,10 +15,10 @@ import (
 )
 
 const (
-	dateLayout     = "2006-01-02T15:04:05Z"
-	unknownDate    = "1970-01-01T00:00:00Z"
-	unknownBucket  = "unknown-date"
-	defaultKeyLen  = 16
+	dateLayout    = "2006-01-02T15:04:05Z"
+	unknownDate   = "1970-01-01T00:00:00Z"
+	unknownBucket = "unknown-date"
+	defaultKeyLen = 16
 )
 
 // address is the metadata.json address shape: {name, address}.
@@ -78,15 +78,15 @@ func deriveMessage(account string, m model.Message, keyLen int) (*derivedMessage
 	body := readAll(parsed.Body)
 
 	dm := &derivedMessage{
-		key:           hashHex(m.Raw, keyLen),
-		raw:           m.Raw,
-		payloads:      map[string][]byte{},
-		subject:       decodeHeaderWord(hdr.Get("Subject")),
-		from:          firstAddress(hdr.Get("From")),
-		to:            parseAddressList(hdr.Get("To")),
-		cc:            parseAddressList(hdr.Get("Cc")),
-		bcc:           parseAddressList(hdr.Get("Bcc")),
-		replyTo:       parseAddressList(hdr.Get("Reply-To")),
+		key:             hashHex(m.Raw, keyLen),
+		raw:             m.Raw,
+		payloads:        map[string][]byte{},
+		subject:         decodeHeaderWord(hdr.Get("Subject")),
+		from:            firstAddress(hdr.Get("From")),
+		to:              parseAddressList(hdr.Get("To")),
+		cc:              parseAddressList(hdr.Get("Cc")),
+		bcc:             parseAddressList(hdr.Get("Bcc")),
+		replyTo:         parseAddressList(hdr.Get("Reply-To")),
 		messageIDHeader: optionalString(hdr.Get("Message-Id")),
 	}
 
