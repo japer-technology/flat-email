@@ -48,8 +48,10 @@ Choose one of these models explicitly:
 1. Split `metadata.json` into:
    - byte-derived metadata, rebuildable from `message.eml`
    - provider/archive metadata, preserved as authoritative archive state
-2. Keep one `metadata.json`, but stop describing it as purely byte-derived.
-3. Add a separate authoritative sidecar for connector facts, and derive
+     
+ANSWERED!!! 2. Keep one `metadata.json`, but stop describing it as purely byte-derived.
+   
+4. Add a separate authoritative sidecar for connector facts, and derive
    `metadata.json` from `message.eml` plus that sidecar.
 
 The spec should say exactly which files are authoritative and which inputs are
@@ -72,6 +74,8 @@ This creates noisy diffs, especially for the Git-backed archive mode, where the
 spec is trying to ensure commits show real mail changes rather than sync churn.
 
 **Action**
+
+ANSWERED!!!
 
 Move volatile sync-observation fields out of per-message derived files, or weaken
 the idempotency guarantee to explicitly allow sync-marker churn. The cleaner
@@ -100,6 +104,8 @@ The archive needs a clear data-preservation policy. If raw bytes are the source
 of truth, validity cannot be guaranteed for every imported message.
 
 **Action**
+
+ANSWERED!!!
 
 Prefer an explicit preservation rule:
 
