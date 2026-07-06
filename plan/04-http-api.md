@@ -40,6 +40,11 @@ the entire mailbox from disk.
 ### New packages
 
 ```
+internal/query/
+  query.go      # Shared, transport-neutral archive read layer: list/get
+                # messages, threads, labels via storage.Backend + catalog.
+                # Both the HTTP handlers here and the MCP tools (Plan 05)
+                # call this package, so archive access logic exists once.
 internal/api/
   server.go     # net/http server setup, middleware, graceful shutdown
   routes.go     # Route registration
@@ -52,7 +57,7 @@ internal/api/
     health.go    # GET /health
 internal/reader/
   generate.go   # Render index.html from a template + catalog
-  template.html # The self-contained reader template
+  template.html # The self-contained reader template (embedded via go:embed)
 ```
 
 ### API routes
@@ -63,15 +68,23 @@ All routes are read-only (`GET` only). All responses are JSON unless noted.
 |-------|-------------|
 | `GET /health` | `{"ok": true}` — used by `index.html` to detect if the API is running |
 | `GET /catalog` | Returns `catalog.json` contents |
-| `GET /messages?label=inbox&after=2024-01-01&before=2024-12-31&limit=50&offset=0` | Paginated message list with filtering |
+| `GET /accounts` | Lists account addresses in the archive |
+| `GET /messages?account=me@example.com&label=inbox&after=2024-01-01&before=2024-12-31&limit=50&offset=0` | Paginated message list with filtering (`account` optional; defaults to all) |
 | `GET /messages/{messageKey}` | Full message metadata + body preview |
 | `GET /messages/{messageKey}/raw` | Raw `message.eml` bytes (`Content-Type: message/rfc822`) |
 | `GET /messages/{messageKey}/html` | Sanitized `body.html` (already safe) |
 | `GET /messages/{messageKey}/attachments/{filename}` | Decoded attachment file (serves directly from `attachments/`) |
-| `GET /threads/{threadKey}` | Ordered list of message keys in thread |
-| `GET /labels` | Label manifest (`labels/labels.json`) |
-| `GET /labels/{sanitizedName}` | Message keys for one label |
+| `GET /threads/{threadKey}?account=...` | Ordered list of message keys in thread |
+| `GET /labels?account=...` | Label manifest (per-account `labels/labels.json`) |
+| `GET /labels/{sanitizedName}?account=...` | Message keys for one label |
 | `GET /search?q=...&limit=20&offset=0` | Full-text search (delegates to `internal/search/`) |
+
+Account scoping: message keys are content digests and therefore unique
+archive-wide (SPEC.md §4.2), so message routes need no account parameter —
+when the same message exists under several accounts the handler resolves it
+via the catalog and may return all locations. Threads and labels, by contrast,
+live under `accounts/<account>/` on disk, so their routes take an `account`
+query parameter; when the archive holds exactly one account it may be omitted.
 
 All list endpoints include `total`, `limit`, and `offset` in the response
 envelope for pagination.
@@ -102,6 +115,12 @@ by `SUGGESTIONS.md §5` and SPEC.md §11:
 
 - Binds `127.0.0.1` only (never `0.0.0.0`) unless `--host` is explicitly set.
 - `--host` flag requires a confirmation prompt if not `127.0.0.1`.
+- **CORS for the `file://` reader.** A page opened from `file://` sends
+  `Origin: null` (or no origin), so without CORS headers the reader's
+  `fetch("http://127.0.0.1:8080/health")` fallback silently fails. The server
+  responds with `Access-Control-Allow-Origin: *` on its read-only GET routes —
+  safe here because every endpoint is read-only, unauthenticated, and
+  localhost-bound; there is no credentialed state to leak cross-origin.
 - Sets `X-Content-Type-Options: nosniff` and `X-Frame-Options: DENY` on all
   responses.
 - Serves attachment files with `Content-Disposition: attachment` (forces
@@ -169,6 +188,8 @@ by `SUGGESTIONS.md §5` and SPEC.md §11:
 | Risk | Mitigation |
 |------|-----------|
 | `file://` `fetch()` blocked in Chrome for `catalog.json` | Use `<script src="catalog.js">` (confirmed to work) instead of `fetch()` |
+| Reader on `file://` cannot call the API (`Origin: null` blocked by CORS) | Serve `Access-Control-Allow-Origin: *` on the read-only GET routes; cover with an httptest assertion |
+| Path traversal via `{messageKey}` / `{filename}` route parameters | Validate `messageKey` against the `[0-9a-f]{32,64}` key grammar; resolve attachment paths through the catalog, never by joining raw user input onto the filesystem |
 | `index.html` grows too large if catalog is embedded inline | Cap at ~10 k messages inline; link to API for the rest |
 | XSS via message content in the reader | Per-message content is served from already-sanitized `email.html`; the reader itself never renders raw email HTML inline |
 | Port conflicts for `flat-email serve` | Default to `8080`, `--port` flag; detect and report binding errors clearly |

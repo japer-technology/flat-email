@@ -21,7 +21,7 @@ shareable without a dedicated server.
   (compatible with AWS S3, Backblaze B2, Cloudflare R2, and MinIO via the
   S3-compatible API).
 - A `GCSBackend` for Google Cloud Storage.
-- A `AzureBackend` for Azure Blob Storage.
+- An `AzureBackend` for Azure Blob Storage.
 - Detection of the target from the `--out` URL scheme: `s3://`, `gs://`, `az://`.
 - Credential handling: the standard SDK credential chains (env vars, config
   files, instance metadata) — no new credential format introduced.
@@ -37,8 +37,8 @@ shareable without a dedicated server.
 **Out of scope**
 
 - Client-side encryption at rest (IDEAS.md §1.4 — a separate plan).
-- A packing / manifest scheme for reducing per-object cost (IDEAS.md §16 open
-  item — deferred).
+- A packing / manifest scheme for reducing per-object cost (a SPEC.md §16 open
+  item, raised in IDEAS.md §1.3 — deferred).
 - Multi-part upload for very large attachments (relevant above ~100 MB; rare
   in personal mail).
 - Consumer cloud sync folders (Dropbox, Google Drive, OneDrive) — these use
@@ -99,10 +99,12 @@ invariant). For cloud backends, `HeadObject` is cheap (~0.004 USD per 10 k
 calls on S3). On a re-sync with 0 new messages, only `HeadObject` calls are
 made — no `PutObject` charges.
 
-For large initial syncs (10 k+ messages), the initial `Exists` check can be
-skipped by passing `--overwrite` flag; the producer writes all objects
-unconditionally (still idempotent by content, but uses more bandwidth and
-incurs more write costs).
+For large initial syncs (10 k+ messages), the per-content-file `Exists` checks
+can be skipped by passing an `--overwrite` flag; the producer writes those
+objects unconditionally (still idempotent by content, but uses more bandwidth
+and incurs more write costs). One caveat: the producer must **still read any
+existing `metadata.json`** to preserve `firstSeen` (SPEC.md §6/§10) — the flag
+skips existence checks for content files, never the `firstSeen` lookup.
 
 ### Parallelism
 
@@ -110,6 +112,13 @@ Cloud object writes are independent; the producer can safely upload multiple
 objects concurrently. Each backend implementation uses a bounded worker pool
 (default concurrency: 8) to parallelise `Put` calls, controlled by a
 `--cloud-concurrency N` flag.
+
+Contract caveat: the producer assumes read-after-write consistency within a
+run (it may `Read`/`Exists` a path it has just `Put` — e.g. the `firstSeen`
+lookup). Concurrency must therefore live *inside* `Put` (blocking until the
+object is durably accepted) or behind an explicit `Flush()` barrier the CLI
+calls before any dependent reads — a `Put` that merely enqueues and returns
+would silently break the producer.
 
 ### Sync state locality
 
@@ -143,7 +152,10 @@ state, not archive data (SPEC.md §14).
 ### Phase 3 — Parallelism and performance
 
 1. Add a `ConcurrentBackend` wrapper that wraps any `Backend` and parallelises
-   `Put` calls using a bounded goroutine pool.
+   `Put` calls with a bounded goroutine pool, plus a `Flush() error` method
+   that blocks until all in-flight writes complete (and surfaces the first
+   error). The CLI calls `Flush` before any step that reads back written paths
+   (see "Parallelism" caveat above).
 2. Benchmark `flat-email import` against a 1 000-message fixture: local FS vs.
    S3 (MinIO); document throughput numbers.
 3. Add `--cloud-concurrency` flag (default 8, max 32).
@@ -176,5 +188,5 @@ state, not archive data (SPEC.md §14).
 | Many-small-files cost (one S3 PUT per derived file; ~12 objects per message) | Document cost estimate; defer packing scheme to SPEC.md §16 open item |
 | S3-compatible API differences (Backblaze B2 vs. R2 vs. real S3) | Test against each; document known quirks; use only the common subset of the S3 API |
 | Cloud credential mistakes (public bucket, wrong region) | Validate bucket accessibility and warn if public before writing; add a `--dry-run` mode |
-| `List` pagination performance on 100 k+ object archives | Use continuation-token pagination; cache the list in `catalog.json` to avoid listing on every read |
+| `List` pagination performance on 100 k+ object archives | Use continuation-token pagination; prefer reading `catalog.json` (already the archive's own index) over listing objects wherever possible |
 | Network interruption mid-sync leaves partial archive | The idempotency invariant (SPEC.md §6) makes re-running safe; document this; no special recovery logic needed |

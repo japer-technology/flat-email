@@ -57,13 +57,17 @@ internal/syncstate/
 
 ```
 type Connector interface {
-    // Messages fetches all messages for the account. On the first run or when
-    // the cursor is absent it does a full scan; on subsequent runs it uses the
-    // stored cursor to fetch only changes.
-    Messages(ctx context.Context, account string, state SyncState) ([]model.Message, SyncState, error)
+    // Fetch retrieves the account's messages and label definitions. On the
+    // first run or when the cursor is absent it does a full scan; on
+    // subsequent runs it uses the stored cursor to fetch only changes.
+    Fetch(ctx context.Context, account string, state SyncState) (model.Account, SyncState, error)
 }
 ```
 
+The connector returns a `model.Account` (not a bare `[]model.Message`) because
+the producer also needs the account's label definitions — the
+`map[string]model.Label` with original names, provider IDs, `type`
+(system/user), and visibility that feeds the label manifest (SPEC.md §4.7).
 This interface is the only contract the CLI and future connectors must satisfy.
 
 ### Data flow
@@ -72,11 +76,20 @@ This interface is the only contract the CLI and future connectors must satisfy.
 flat-email sync
   → gmail.Auth (keychain ↔ OAuth)
   → syncstate.Load (read cursor from .flat-email-state/)
-  → gmail.Connector.Messages (full or incremental)
+  → gmail.Connector.Fetch (full or incremental)
   → model.Input
   → archive.Produce (storage.Backend)
   → syncstate.Save (write new cursor)
 ```
+
+Note on incremental runs: `archive.Produce` today regenerates the whole
+archive from a complete `model.Input`. The incremental path (Phase 3) needs a
+partial-update entry point in `internal/archive/` that can update
+`metadata.json`, label indexes, thread files, and the root
+`catalog.json`/`catalog.js` for a subset of messages — while preserving each
+message's `firstSeen` (the producer already reads existing `metadata.json`
+for this). This shared machinery is a prerequisite for Plan 02 as well; see
+`plan/README.md` "Shared foundations".
 
 ### Sync state file
 
@@ -116,15 +129,20 @@ No message bodies, no credentials.
      bytes) plus metadata (`internalDate`, `labelIds`, `threadId`, `id`).
    - Respect Gmail API quota: batch fetching (up to 100 IDs per batch request).
 2. Implement `gmail/mapper.go`:
-   - Decode the base64 `raw` field → `model.Message.Raw`.
+   - Decode the base64url `raw` field → `model.Message.Raw`.
    - Convert `internalDate` (Unix ms) → `*time.Time` for `InternalDate`.
    - Map `labelIds` to `model.Message.Labels` (system labels kept as-is;
      user label names resolved via `users.labels.list`).
+   - Build the `model.Account.Labels` map from `users.labels.list`: original
+     name, provider label id, `type` (`system` for Gmail system labels, else
+     `user`), and visibility (`labelListVisibility`) — this feeds the label
+     manifest (SPEC.md §4.7).
    - Map `UNREAD` absence → `seen` flag; `STARRED` → `starred`; `DRAFT` →
-     `draft`; etc.
+     `draft`; `IMPORTANT` → `important`. Keep unmapped label-flags verbatim in
+     `ProviderFlags`.
    - Populate `ProviderMessageID` and `ProviderThreadID`.
 3. Implement `gmail/sync.go` — full path: calls `ListMessages` + `GetMessage`
-   for each, returns `[]model.Message` and a `SyncState{HistoryId: latestId}`.
+   for each, returns a `model.Account` and a `SyncState{HistoryId: latestId}`.
 4. Implement `syncstate` package — JSON read/write under `.flat-email-state/`.
 5. Wire `flat-email sync --provider gmail` to call `archive.Produce`.
 6. Add integration test with recorded HTTP fixtures (no live network required).
@@ -135,13 +153,18 @@ No message bodies, no credentials.
    - Pages through `history.list` from the stored `historyId`.
    - Collects `messagesAdded`, `messagesDeleted`, `labelsAdded`, `labelsRemoved`
      events.
-2. Implement `gmail/sync.go` — incremental path:
+2. Implement `gmail/sync.go` — incremental path (uses the incremental archive
+   update entry point, see `plan/README.md` "Shared foundations"):
    - Fetch full raw bytes only for newly added messages.
    - For label changes on existing messages: read the existing `metadata.json`,
-     update the `labels` / `flags` fields, re-derive `email.html`, re-render
-     label index files. Do **not** rewrite `message.eml`.
+     update the `labels` / `flags` fields, re-derive `email.html`, and
+     re-render the affected label index files. Do **not** rewrite
+     `message.eml`, and preserve `firstSeen`.
    - For deleted messages: update `lastSeen` in `metadata.json`; do not delete
      the message from the archive (append-only per SPEC.md §6).
+   - After any change, regenerate the global derived files: the root
+     `catalog.json` / `catalog.js`, affected `threads/<thread-key>.*`, and
+     `labels/labels.json` — they must always reflect the archive exactly.
 3. Update `syncstate.Save` with the new `historyId` only after all writes
    succeed (write-last to avoid partial-state corruption).
 
@@ -172,8 +195,9 @@ No message bodies, no credentials.
 
 | Risk | Mitigation |
 |------|-----------|
-| Gmail API quota (1 billion units/day per project; `messages.get` costs 5 units) | Batch fetching; expose `--throttle` flag |
+| Gmail API quota (per-project daily units; the binding limit in practice is the **250 units/user/second** rate, and `messages.get` costs 5 units) | Batch fetching; client-side rate limiter; expose `--throttle` flag |
 | OAuth consent screen requires Google verification for production use | Document the "unverified app" path for personal use; provide instructions for users to create their own OAuth credentials |
 | `internalDate` absent on draft / sent messages | Fall back to SPEC.md §4.1 chain (`Received:` then `Date:`) |
 | Keychain unavailable in headless/CI environments | `--token-file` escape hatch (documented as insecure, for CI only) |
-| History API gaps (historyId expired after 7 days of no sync) | Detect `INVALID_HISTORY_ID` error, fall back to full re-scan which remains idempotent |
+| History API gaps (`historyId` typically expires after ~a week of no sync) | Detect the 404/`INVALID_HISTORY_ID` error, fall back to full re-scan which remains idempotent |
+| Whole-mailbox `model.Input` held in memory on large initial syncs | Acceptable for v1 (matches the current producer's contract); track a chunked/streaming produce path as a follow-up shared with Plan 02 |

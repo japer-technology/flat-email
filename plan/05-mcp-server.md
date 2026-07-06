@@ -11,8 +11,10 @@ the local machine.
 ## Prerequisites
 
 - `internal/search/` package exists and search works (Plan 03).
-- `internal/api/` HTTP API works (Plan 04) — the MCP server reuses the same
-  handler logic rather than re-implementing archive access.
+- `internal/query/` shared read layer exists (introduced in Plan 04) — the MCP
+  tools call the same transport-neutral archive-access package as the HTTP
+  handlers, rather than depending on the HTTP handlers themselves or
+  re-implementing archive access.
 
 ## Scope
 
@@ -25,6 +27,7 @@ the local machine.
   - `search_mail` — full-text and structured query, returns ranked message summaries.
   - `get_message` — fetch one message's metadata, subject, from, date, body preview.
   - `get_thread` — fetch an ordered thread with all member message summaries.
+  - `list_accounts` — enumerate account addresses in the archive.
   - `list_labels` — enumerate all labels and their message counts.
   - `get_messages_by_label` — paginated message list for a given label.
   - `get_attachment_info` — metadata for a message's attachments (name, size, type).
@@ -39,7 +42,9 @@ the local machine.
   the read-only guarantee.
 - MCP resources or prompts (tools only for v1).
 - Remote / network-accessible MCP server (stdio only; no TCP/WebSocket transport).
-- Multi-archive or multi-account selection within one MCP session.
+- Multi-archive selection within one MCP session (one `--archive` per process).
+  Multi-**account** archives are supported: label and thread tools take an
+  `account` parameter, and a `list_accounts` tool enumerates the addresses.
 
 ## Architecture
 
@@ -48,9 +53,12 @@ the local machine.
 MCP communicates over stdio using JSON-RPC 2.0. The server reads requests from
 stdin and writes responses to stdout. Error output goes to stderr.
 
-A pure-Go MCP SDK (e.g. `github.com/mark3labs/mcp-go`) handles the JSON-RPC
-framing, capability negotiation, and tool dispatch. The tool handler functions
-are the only application code required.
+A pure-Go MCP SDK handles the JSON-RPC framing, capability negotiation, and
+tool dispatch. The **official SDK** (`github.com/modelcontextprotocol/go-sdk`)
+is the default choice; `github.com/mark3labs/mcp-go` is the fallback if the
+official SDK lacks a needed feature. Either way the framing is abstracted
+behind a thin wrapper (see Risks) so the tool handler functions are the only
+application code that matters.
 
 ### New packages
 
@@ -105,8 +113,19 @@ a structured result. Descriptions are written for the assistant, not for users.
   "description": "Fetch all messages in a thread in chronological order.",
   "inputSchema": {
     "threadKey": "string (required)",
+    "account": "string (optional — required only when the archive has more than one account)",
     "includeBody": "boolean (default false) — set true to include body text for each message"
   }
+}
+```
+
+**`list_accounts`**
+
+```json
+{
+  "name": "list_accounts",
+  "description": "List the account addresses in the archive with per-account message counts.",
+  "inputSchema": {}
 }
 ```
 
@@ -116,7 +135,9 @@ a structured result. Descriptions are written for the assistant, not for users.
 {
   "name": "list_labels",
   "description": "List all labels/folders in the archive with message counts.",
-  "inputSchema": {}
+  "inputSchema": {
+    "account": "string (optional — required only when the archive has more than one account)"
+  }
 }
 ```
 
@@ -128,11 +149,16 @@ a structured result. Descriptions are written for the assistant, not for users.
   "description": "Fetch a paginated list of message summaries for a given label.",
   "inputSchema": {
     "label": "string (required) — sanitized label name as returned by list_labels",
+    "account": "string (optional — required only when the archive has more than one account)",
     "limit": "integer (default 20, max 100)",
     "offset": "integer (default 0)"
   }
 }
 ```
+
+Threads and labels live under `accounts/<account>/` in the archive layout, so
+their tools take an `account` parameter; message keys are content digests and
+unique archive-wide (SPEC.md §4.2), so `get_message` needs none.
 
 **`get_attachment_info`**
 
@@ -178,9 +204,12 @@ a `[truncated]` marker to prevent context-window flooding.
 
 ### Phase 2 — Remaining tools
 
+All handlers go through `internal/query/` (the shared read layer from Plan 04):
+
 1. `mcp/tools/message.go` — read `metadata.json` + `body.txt`.
 2. `mcp/tools/thread.go` — read `threads/<key>.json` then resolve each member.
-3. `mcp/tools/labels.go` — read `labels/labels.json` + per-label JSON files.
+3. `mcp/tools/labels.go` — `list_accounts`, `list_labels`
+   (`labels/labels.json`), and `get_messages_by_label` (per-label JSON files).
 4. `mcp/tools/attachment.go` — read `attachments/attachments.json`.
 
 ### Phase 3 — Guardrails and polish

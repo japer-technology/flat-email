@@ -17,9 +17,13 @@ incremental re-runs fetching only new or changed messages.
 **In scope**
 
 - IMAP4rev1 (RFC 3501) and IMAP4rev2 (RFC 9051) connection and auth.
-  - Auth methods: plain password, CRAM-MD5, LOGIN.
+  - Auth methods: SASL `PLAIN` and `LOGIN` (only ever over an encrypted
+    connection).
   - TLS (port 993) and STARTTLS (port 143).
   - App-password flows (Gmail IMAP, Outlook IMAP with Modern Auth disabled).
+- **Strictly read-only fetching.** All body fetches use `BODY.PEEK[]` (never
+  `RFC822`/`BODY[]`, which implicitly set `\Seen` on the server). This is what
+  upholds the project-wide "never modifies your source mailboxes" guarantee.
 - Full initial sync per folder/mailbox.
 - Incremental sync using `UIDVALIDITY` + `UIDNEXT` cursors (SPEC.md §14).
 - Mapping IMAP flags (`\Seen`, `\Answered`, `\Flagged`, `\Deleted`, `\Draft`,
@@ -92,7 +96,8 @@ flat-email sync --provider imap
    - `Connect(host, port, tls bool, user, pass string) (*Session, error)` — TLS
      dial, CAPABILITY check, SELECT folder.
    - `ListFolders` — `LIST "" "*"` returns all subscribable folders.
-   - `FetchMessages(folder, uidset)` — `UID FETCH <set> (FLAGS INTERNALDATE RFC822)`.
+   - `FetchMessages(folder, uidset)` — `UID FETCH <set> (UID FLAGS INTERNALDATE BODY.PEEK[])`.
+     `BODY.PEEK[]` (not `RFC822`) so fetching never sets `\Seen` upstream.
 4. Add `flat-email auth imap --host ... --user ...` CLI sub-command.
 
 ### Phase 2 — Full initial sync
@@ -100,18 +105,27 @@ flat-email sync --provider imap
 1. Implement `imap/mapper.go`:
    - `INTERNALDATE` response → `model.Message.InternalDate` (first priority for
      bucket date, SPEC.md §4.1).
-   - `RFC822` response body → `model.Message.Raw` (verbatim RFC 5322 bytes).
-   - IMAP system flags → `model.Message.Flags` using the normalised vocabulary.
-   - Folder name → `model.Message.Labels` (one entry per folder).
-   - `UID` and folder → `ProviderMessageID` (encoded as `<folder>/<uid>`).
+   - `BODY.PEEK[]` response literal → `model.Message.Raw` (verbatim RFC 5322
+     bytes).
+   - IMAP system flags → `model.Message.Flags` using the normalised vocabulary
+     (`\Recent` is deprecated in IMAP4rev2; map it when present, never rely on it).
+   - Folder name → `model.Message.Labels` (one entry per folder); build the
+     `model.Account.Labels` map from `LIST` results (folder attributes such as
+     `\Sent` / `\Junk` from SPECIAL-USE map to `type: "system"`).
+   - `UID` and folder → `ProviderMessageID`, encoded as
+     `<folder>/<uidvalidity>/<uid>` so the id stays unambiguous across folder
+     rebuilds.
 2. Implement `imap/sync.go` — full path:
    - `LIST` all folders.
-   - For each folder: `SELECT`, record `UIDVALIDITY` and `UIDNEXT`, fetch all
-     messages with `UID FETCH 1:* ...`.
-   - Deduplicate messages that appear in multiple folders by `Message-ID` header
-     when present, or by raw-byte hash (same key → same message, just referenced
-     from two labels).
-   - Return `[]model.Message` and updated `SyncState`.
+   - For each folder: `SELECT` (read-only via `EXAMINE`), record `UIDVALIDITY`
+     and `UIDNEXT`, fetch all messages with `UID FETCH 1:* ...`.
+   - Deduplicate messages that appear in multiple folders by the SHA-256 of the
+     raw bytes — the same digest that keys the archive (SPEC.md §4.2), so the
+     store-once rule falls out for free. Do **not** dedupe on the `Message-ID`
+     header: it is optional, not unique, and two different byte sequences are
+     two different messages by definition. Each duplicate contributes its
+     folder as an additional label on the single stored message.
+   - Return a `model.Account` and updated `SyncState`.
 3. Wire `flat-email sync --provider imap` to the full sync path.
 
 ### Phase 3 — Incremental sync
@@ -122,7 +136,9 @@ flat-email sync --provider imap
    - If unchanged: fetch only `UID <uidnext>:*` (new messages since last sync).
 2. Detect flag changes: `UID FETCH <known-uid-range> FLAGS` (flags-only fetch,
    no body) and update `metadata.json` for any changed messages without
-   rewriting `message.eml`.
+   rewriting `message.eml` — using the same incremental archive update entry
+   point as Plan 01 (see `plan/README.md` "Shared foundations"), which also
+   regenerates the affected label indexes and the root `catalog.json`/`catalog.js`.
 3. Handle `EXPUNGE` responses (messages removed upstream): update `lastSeen` in
    `metadata.json`; retain the message in the archive (append-only).
 4. Update cursor after all writes succeed.
@@ -154,3 +170,5 @@ flat-email sync --provider imap
 | TLS certificate issues on self-hosted servers | `--skip-tls-verify` flag (documented as insecure; for trusted private networks only) |
 | Very large mailboxes (100 k+ messages) on initial sync | Stream `UID FETCH` in UID-range batches of 1 000; report progress |
 | IMAP COPY semantics create duplicate raw bytes for messages in multiple folders | Deduplicate by raw-byte SHA-256 (same key → same archive entry, two label references) |
+| Accidentally marking mail read on the server (write side-effect) | Use `EXAMINE` (read-only select) and `BODY.PEEK[]` everywhere; add a test asserting the mock server never receives a `STORE`/flag-setting command |
+| The same logical message has *different* bytes in different folders (some servers rewrite headers on COPY) | Accept it: two byte sequences are two archive entries by SPEC.md §4.2; document the behaviour rather than guess at equivalence |
