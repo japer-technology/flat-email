@@ -57,7 +57,9 @@ internal/api/
     health.go    # GET /health
 internal/reader/
   generate.go   # Render index.html from a template + catalog
-  template.html # The self-contained reader template (embedded via go:embed)
+  template.html # The self-contained reader template (compiled into the
+                # binary via go:embed, so `flat-email` ships as a single
+                # executable with no template files to distribute)
 ```
 
 ### API routes

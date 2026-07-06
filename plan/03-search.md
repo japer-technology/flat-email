@@ -77,9 +77,12 @@ already reserved by SPEC.md as regenerable. Excluded from Git archives via
 
 ```sql
 -- Structured metadata (ordinary table for filtered queries).
--- Primary key is (account, message_key): the message key is a content digest,
--- so the same message synced into two accounts shares a key but has its own
--- labels/flags per account.
+-- Primary key is (account, message_key): SPEC.md's store-once rule (§4.3)
+-- applies *within* an account (one copy shared by many labels), but the
+-- layout (SPEC.md §3) stores each account's messages under its own
+-- accounts/<account>/messages/ tree — so the same content digest can appear
+-- under two accounts, each with its own labels/flags. The index mirrors the
+-- archive exactly.
 CREATE TABLE messages (
   account       TEXT NOT NULL,
   message_key   TEXT NOT NULL,
