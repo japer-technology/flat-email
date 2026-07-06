@@ -27,8 +27,11 @@ and no round-trip to the email provider.
 - Ranked results returned to stdout as JSON or a human-readable table.
 - `flat-email index --archive ./my-archive` command to build/rebuild the index.
 - Index is rebuilt automatically on `sync` (after the archive write succeeds).
-- Index rebuild is idempotent and produces the same bytes for the same archive
-  content.
+- Index rebuild is idempotent in *behaviour*: rebuilding from the same archive
+  content always yields the same query results. (Byte-identity of the SQLite
+  file is explicitly **not** promised — see Testing strategy. The archive's §6
+  determinism guarantee applies to archive files; `index/` is regenerable
+  state outside that guarantee.)
 
 **Out of scope**
 
@@ -73,29 +76,39 @@ already reserved by SPEC.md as regenerable. Excluded from Git archives via
 ### Schema
 
 ```sql
--- Structured metadata (ordinary table for filtered queries)
+-- Structured metadata (ordinary table for filtered queries).
+-- Primary key is (account, message_key): SPEC.md's store-once rule (§4.3)
+-- applies *within* an account (one copy shared by many labels), but the
+-- layout (SPEC.md §3) stores each account's messages under its own
+-- accounts/<account>/messages/ tree — so the same content digest can appear
+-- under two accounts, each with its own labels/flags. The index mirrors the
+-- archive exactly.
 CREATE TABLE messages (
-  message_key   TEXT PRIMARY KEY,
   account       TEXT NOT NULL,
+  message_key   TEXT NOT NULL,
   date          TEXT NOT NULL,  -- ISO 8601 UTC
   subject       TEXT,
   from_name     TEXT,
   from_address  TEXT,
+  to_addresses  TEXT,           -- JSON array string
   labels        TEXT,           -- JSON array string
   flags         TEXT,           -- JSON array string
   has_attachment INTEGER,
-  thread_key    TEXT
+  thread_key    TEXT,
+  PRIMARY KEY (account, message_key)
 );
 
--- Full-text index
+-- Full-text index. A standalone (self-contained) FTS5 table: the searchable
+-- text is stored in the FTS table itself, and each row's rowid equals the
+-- corresponding messages.rowid so hits join back to metadata cheaply.
+-- (An external-content table over `messages` would require the content table
+-- to carry body_text, defeating the point of a separate metadata table.)
 CREATE VIRTUAL TABLE messages_fts USING fts5(
-  message_key UNINDEXED,
   subject,
   from_name,
   from_address,
   to_addresses,
   body_text,
-  content='messages',   -- linked for snippet extraction
   tokenize='unicode61'
 );
 ```
@@ -110,11 +123,11 @@ The query DSL is intentionally Gmail-like so users need no new mental model:
 | `from:alice` | `from_address LIKE '%alice%' OR from_name LIKE '%alice%'` |
 | `to:bob` | `to_addresses LIKE '%bob%'` |
 | `subject:invoice` | FTS5 on `subject` only |
-| `label:inbox` | `labels JSON contains 'inbox'` |
+| `label:inbox` | `EXISTS (SELECT 1 FROM json_each(labels) WHERE value = 'inbox')` (SQLite JSON1) |
 | `has:attachment` | `has_attachment = 1` |
 | `after:2024-01-01` | `date >= '2024-01-01T00:00:00Z'` |
 | `before:2024-12-31` | `date < '2024-12-31T00:00:00Z'` |
-| `is:unread` | `flags NOT LIKE '%"seen"%'` |
+| `is:unread` | `NOT EXISTS (SELECT 1 FROM json_each(flags) WHERE value = 'seen')` |
 
 Results are ranked by FTS5 BM25 score, then descending date as a tie-breaker.
 
@@ -128,8 +141,9 @@ Results are ranked by FTS5 BM25 score, then descending date as a tie-breaker.
    - `Build(backend storage.Backend, db *sql.DB)` — walks the archive via
      `backend.List("accounts/")`, reads each `metadata.json` and `body.txt`,
      inserts rows.
-   - `Update(backend, db, messageKeys []string)` — upserts only changed messages
-     (called by sync after new messages are written).
+   - `Update(backend, db, changed []MessageRef)` — upserts only changed
+     messages, where `MessageRef` is an `(account, messageKey)` pair (called
+     by sync after new messages are written).
    - Both paths are idempotent (INSERT OR REPLACE).
 4. Implement `flat-email index --archive` CLI sub-command calling `search.Build`.
 5. Call `search.Update` at the end of `flat-email sync` automatically.
@@ -163,9 +177,10 @@ Results are ranked by FTS5 BM25 score, then descending date as a tie-breaker.
 - **Integration test**: build an index from the existing golden archive fixture;
   run a set of known queries; assert the returned message keys match expected
   results exactly (deterministic because the archive is deterministic).
-- **Rebuild idempotency test**: build the index twice from the same archive,
-  assert the SQLite file is byte-identical (achievable by always `VACUUM` after
-  build and using a fixed page size).
+- **Rebuild consistency test**: build the index twice from the same archive,
+  run the full query test-set against both, assert identical results. (Do not
+  assert byte-identical SQLite files — page allocation makes that brittle and
+  it buys nothing: the index is regenerable state, not archive data.)
 
 ## Risks
 

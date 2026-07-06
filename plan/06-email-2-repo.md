@@ -115,7 +115,8 @@ are small and useful to have in history, but they change on every sync).
 
 ### Phase 2 — Commit message generation
 
-1. Accumulate sync statistics during `archive.Produce`:
+1. Extend `archive.Produce` to return sync statistics (it currently returns
+   only `error` — this is a small, backwards-compatible producer change):
    - New messages written.
    - Messages whose `metadata.json` was updated (label changes).
    - Date range of new messages.
@@ -137,8 +138,10 @@ are small and useful to have in history, but they change on every sync).
 ### Phase 4 — `per-message` granularity mode
 
 1. Add `--git-commit-granularity per-message` flag.
-2. In this mode, `GitBackend.Commit` is called once per message written,
-   with a message like `add: <message-key> (<date>, <from>, <subject>)`.
+2. This mode needs a per-message hook: `archive.Produce` writes all messages in
+   one call today, so the producer gains an optional callback invoked after
+   each message's files are written; `GitBackend` uses it to commit with a
+   message like `add: <message-key> (<date>, <from>, <subject>)`.
 3. This produces a one-commit-per-email history, useful for searching with
    `git log --grep` but much slower for large syncs.
 4. Default remains `per-sync`.
@@ -161,6 +164,7 @@ are small and useful to have in history, but they change on every sync).
 |------|-----------|
 | Large attachments bloat the Git object store | Document Git LFS as the mitigation; add `--git-lfs-threshold <bytes>` as a future flag |
 | `git` binary not on PATH in some environments | Detect absence at startup and print a clear error; document the requirement |
+| No `user.name`/`user.email` configured — `git commit` fails on fresh machines | Commit with explicit `-c user.name="flat-email" -c user.email="flat-email@localhost"` fallbacks when the user has no Git identity, so archiving never blocks on Git setup |
 | Slow `git add -A` on large archives (100 k files) | Use `git update-index --add --remove --stdin` with file list for per-sync efficiency |
 | `catalog.js` and `index.html` change on every sync, polluting diffs | Document the `.gitignore` option; provide `--git-ignore-derived` flag |
 | Credentials accidentally committed if user mis-places `state/` | The generated `.gitignore` excludes `.flat-email-state/`; add a pre-commit check that fails if any file under the archive path matches known secret patterns |
