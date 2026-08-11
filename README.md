@@ -6,14 +6,14 @@
   </picture>
 </p>
 
-> [!WARNING]
-> This is pre-alpha. It is not yet conformant or safe for real execution.
-
 A portable email extraction and archiving system that pulls messages from Gmail,
 Outlook, IMAP, and other providers, then converts them into a flat,
 filesystem-native structure. It preserves emails, attachments, metadata, labels,
 and threads as ordinary files, making personal mail searchable, ownable,
 portable, and accessible through tools, APIs, MCP, or direct file inspection.
+
+> [!WARNING]
+> This is pre-alpha. It is not yet conformant or safe for real execution.
 
 > **Project status: early development.** The on-disk format is defined in
 > [`SPEC.md`](SPEC.md), with machine-readable schemas in [`schemas/`](schemas/)
