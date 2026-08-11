@@ -6,6 +6,9 @@
   </picture>
 </p>
 
+> [!WARNING]
+> This is pre-alpha. It is not yet conformant or safe for real execution.
+
 A portable email extraction and archiving system that pulls messages from Gmail,
 Outlook, IMAP, and other providers, then converts them into a flat,
 filesystem-native structure. It preserves emails, attachments, metadata, labels,
